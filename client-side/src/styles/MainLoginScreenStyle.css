@@ -1,0 +1,189 @@
+/* Reset e Fontes */
+        .login-container {
+          display: flex;
+          min-height: 100vh;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          color: #1a1a1a;
+          margin: 0;
+        }
+
+        /* Lado Esquerdo: Banner Verde */
+        .banner-side {
+            flex: 1;
+            background-color: #10b981; /* Verde Emerald */
+            background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 0%, transparent 50%);
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .banner-side::after {
+            content: "";
+            position: absolute;
+            top: -10%; right: -10%;
+            width: 400px; height: 400px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .logo-icon {
+            font-size: 50px;
+            margin-bottom: 40px;
+        }
+
+        .banner-side h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+        }
+
+        .banner-side p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            max-width: 450px;
+            color: #ecfdf5;
+        }
+
+        .footer-text {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        /* Lado Direito: Formulário */
+        .form-side {
+            flex: 1;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .form-wrapper {
+          width: 100%;
+          max-width: 400px;
+        }
+
+        .brand-name {
+          font-weight: 800;
+          font-size: 1.5rem;
+          margin-bottom: 60px;
+        }
+
+        .welcome-section h2 {
+          font-size: 2rem;
+          font-weight: 700;
+          margin-bottom: 10px;
+        }
+
+        .welcome-section p {
+          color: #666;
+          font-size: 0.9rem;
+          margin-bottom: 40px;
+        }
+
+        .welcome-section a {
+          color: #1a1a1a;
+          font-weight: 600;
+          text-decoration: underline;
+        }
+
+        /* Inputs Estilizados (Underline) */
+        .input-group {
+          margin-bottom: 30px;
+          border-bottom: 1px solid #ddd;
+          transition: border-color 0.3s;
+        }
+
+        .input-group:focus-within {
+          border-bottom: 2px solid #10b981;
+        }
+
+        .input-group label {
+          display: block;
+          text-transform: uppercase;
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #999;
+          letter-spacing: 1px;
+        }
+
+        .input-group input {
+          width: 100%;
+          border: none;
+          padding: 10px 0;
+          font-size: 1.1rem;
+          outline: none;
+          background: transparent;
+        }
+
+        .messageError{
+            width: 100%;
+            height: 50px;
+            border-radius: 10px;
+            background-color: rgb(238, 91, 91);
+            color: white;
+            font-weight: 500;
+
+        }
+
+        /* Botões */
+        .btn-login {
+          width: 100%;
+          background: #1a1a1a;
+          color: white;
+          border: none;
+          padding: 16px;
+          border-radius: 6px;
+          font-weight: 700;
+          font-size: 1rem;
+          cursor: pointer;
+          margin-top: 10px;
+          transition: transform 0.1s;
+        }
+
+        .btn-login:active { transform: scale(0.98); }
+
+        .divider {
+          text-align: center;
+          margin: 20px 0;
+          color: #ccc;
+          position: relative;
+        }
+
+        .btn-google {
+          width: 100%;
+          background: white;
+          border: 1px solid #ddd;
+          padding: 12px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .forgot-pass {
+          text-align: center;
+          margin-top: 30px;
+          font-size: 0.9rem;
+          color: #666;
+        }
+
+        .forgot-pass a {
+          color: #1a1a1a;
+          font-weight: 700;
+          text-decoration: underline;
+        }
+
+        /* Responsividade Básica */
+        @media (max-width: 900px) {
+          .banner-side { display: none; }
+        }

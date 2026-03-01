@@ -1,0 +1,33 @@
+.reports-layout { display: flex; min-height: 100vh; background-color: #f8fafc; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
+
+.kpi-card { 
+    background: white; padding: 20px; border-radius: 12px; display: flex; align-items: center; gap: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+}
+
+.kpi-icon { padding: 12px; border-radius: 10px; color: white; }
+.kpi-icon.blue { background: #3b82f6; }
+.kpi-icon.green { background: #10b981; }
+.kpi-icon.orange { background: #f59e0b; }
+
+.kpi-data span { font-size: 0.85rem; color: #64748b; }
+.kpi-data h3 { font-size: 1.5rem; margin: 0; color: #1e293b; }
+
+.report-table-section { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.table-header { padding: 20px; border-bottom: 1px solid #e2e8f0; }
+
+.report-table { width: 100%; border-collapse: collapse; text-align: left; }
+.report-table th { background: #f1f5f9; padding: 15px; font-size: 0.85rem; color: #475569; }
+.report-table td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+
+.badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+.badge.baixo { background: #fee2e2; color: #ef4444; }
+.badge.moderado { background: #fef3c7; color: #d97706; }
+.badge.ok { background: #dcfce7; color: #10b981; }
+
+.btn-export {
+    display: flex; align-items: center; gap: 8px; background: #1e293b; color: white;
+    border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: 0.2s;
+}
+.btn-export:hover { background: #334155; }

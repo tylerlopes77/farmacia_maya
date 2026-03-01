@@ -1,0 +1,31 @@
+.supplier-layout { display: flex; background: #f8fafc; min-height: 100vh; }
+                .main-content { flex: 1; margin-left: 260px; padding: 40px; font-family: -apple-system, sans-serif; }
+                
+                .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+                .header-title h2 { color: #062d27; margin: 0; font-size: 1.8rem; font-weight: 700; }
+                .header-title p { color: #64748b; margin-top: 5px; }
+
+                .btn-add { background: #10b981; color: white; border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 600; transition: all 0.2s; }
+                .btn-add:hover { background: #059669; transform: translateY(-2px); }
+
+                .supplier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+                .supplier-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; }
+                .supplier-card:hover { transform: translateY(-4px); border-color: #10b981; }
+
+                .card-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+                .icon-box { background: #f0fdf4; color: #10b981; padding: 10px; border-radius: 12px; }
+                .card-info h3 { margin: 0; color: #1e293b; font-size: 1.1rem; }
+                
+                .contact-item { display: flex; align-items: center; gap: 10px; color: #64748b; font-size: 0.9rem; margin-bottom: 12px; }
+                
+                .card-actions { display: flex; gap: 10px; margin-top: 20px; padding-top: 15px; border-top: 1px solid #f1f5f9; }
+                .action-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.85rem; transition: all 0.2s; }
+                .action-btn:hover { background: #f8fafc; }
+                .btn-delete:hover { color: #ef4444; border-color: #fee2e2; background: #fff1f2; }
+
+                /* Modal */
+                .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+                .modal-content { background: white; padding: 32px; border-radius: 20px; width: 100%; max-width: 450px; }
+                .form-group { margin-bottom: 15px; }
+                .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: #475569; }
+                .form-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
