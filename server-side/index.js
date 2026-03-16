@@ -422,27 +422,25 @@ app.get('/relatorios/estoque', async (req, res) => {
             nome, 
             quantidade, 
             preco,
-            data_expiracao,
-            (quantidade * preco) AS valor_estimado_estoque,
-            CASE 
-                WHEN quantidade <= 5 THEN 'BAIXO'
-                WHEN quantidade <= 20 THEN 'MODERADO'
-                ELSE 'OK'
-            END AS status_nivel
+            (quantidade * preco) AS valor_total
         FROM produtos
-        ORDER BY quantidade ASC
+        ORDER BY valor_total DESC -- Os produtos mais valiosos primeiro
+        LIMIT 10 -- Para o gráfico não ficar muito poluído
     `;
 
     try {
         const result = await pool.query(sql);
-        const resumo = {
-            total_itens: result.rows.reduce((acc, item) => acc + item.quantidade, 0),
-            valor_total_patrimonio: result.rows.reduce((acc, item) => acc + parseFloat(item.valor_estimado_estoque), 0),
-            produtos: result.rows
-        };
-        res.json(resumo);
+        
+        const totalItens = result.rows.reduce((acc, item) => acc + item.quantidade, 0);
+        const patrimonioTotal = result.rows.reduce((acc, item) => acc + parseFloat(item.valor_total), 0);
+
+        res.json({
+            total_itens: totalItens,
+            valor_total_patrimonio: patrimonioTotal,
+            dados_grafico: result.rows 
+        });
     } catch (error) {
-        res.status(500).json({ error: 'Erro ao gerar relatório de estoque', details: error.message });
+        res.status(500).json({ error: 'Erro ao gerar dados', details: error.message });
     }
 });
 
@@ -452,14 +450,14 @@ app.get('/relatorios/vendas', async (req, res) => {
 
     const sql = `
         SELECT 
-            p.nome, 
-            SUM(v.quantidade) as total_unidades, 
-            SUM(v.valor_total) as receita_total
-        FROM vendas v
-        JOIN produtos p ON v.produto_id = p.id
-        WHERE v.data_venda BETWEEN $1 AND $2
-        GROUP BY p.nome
-        ORDER BY receita_total DESC
+        p.nome, 
+        SUM(v.quantidade)::INT as total_unidades, 
+        SUM(v.valor_total)::FLOAT as receita_total
+    FROM vendas v
+    JOIN produtos p ON v.produto_id = p.id
+    WHERE v.data_venda BETWEEN $1 AND $2
+    GROUP BY p.nome
+    ORDER BY receita_total DESC
     `;
 
     try {

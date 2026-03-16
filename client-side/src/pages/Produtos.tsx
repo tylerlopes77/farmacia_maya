@@ -2,8 +2,8 @@ import { useEffect, useState, FormEvent } from 'react';
 import Sidebar from '../components/SideBar.tsx';
 import '../styles/produtos.css';
 
-// Adicionado o ícone Search
-import { Plus, Trash2, X, Package, DollarSign, Users, Calendar, Search } from 'lucide-react';
+// Ícones adicionados
+import { Plus, Trash2, X, Package, DollarSign, Users, Calendar, Search, AlertCircle } from 'lucide-react';
 
 interface Produto {
     id: number;
@@ -24,8 +24,6 @@ export default function Produtos() {
     const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    
-    // 1. Estado para o termo de pesquisa
     const [searchTerm, setSearchTerm] = useState('');
 
     const [formData, setFormData] = useState({
@@ -57,7 +55,34 @@ export default function Produtos() {
         }
     };
 
-    // 2. Lógica de Filtragem (calculada a cada renderização)
+    // Lógica para renderizar o status de validade
+    const renderValidadeStatus = (dataExp: string | null) => {
+        if (!dataExp) return <span>---</span>;
+
+        const hoje = new Date();
+        const dataProduto = new Date(dataExp);
+        const diffTempo = dataProduto.getTime() - hoje.getTime();
+        const diffDias = Math.ceil(diffTempo / (1000 * 60 * 60 * 24));
+
+        if (diffDias < 0) {
+            return (
+                <span className="stock-badge stock-low" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <AlertCircle size={14} /> EXPIRADO
+                </span>
+            );
+        } 
+        
+        if (diffDias <= 30) {
+            return (
+                <span className="stock-badge" style={{ backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fbbf24' }}>
+                    Expira em {diffDias} dias
+                </span>
+            );
+        }
+
+        return <span style={{ color: 'var(--text-secondary)' }}>{dataExp}</span>;
+    };
+
     const produtosFiltrados = produtos.filter((p) =>
         p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.id.toString().includes(searchTerm)
@@ -127,7 +152,6 @@ export default function Produtos() {
                         <p>Gerencie o inventário da Farmácia Maya.</p>
                     </div>
 
-                    {/* 3. Barra de Pesquisa */}
                     <div className="search-wrapper" style={{ flex: 1, maxWidth: '400px', margin: '0 20px', position: 'relative' }}>
                         <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                         <input 
@@ -156,12 +180,11 @@ export default function Produtos() {
                                     <th>Produto</th>
                                     <th>Preço Un.</th>
                                     <th>Status de Stock</th>
+                                    <th>Data de Expiração</th>
                                     <th>Ações</th>
-                                    <th>Data de expiração</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {/* 4. Mapear a lista filtrada em vez da original */}
                                 {produtosFiltrados.length > 0 ? (
                                     produtosFiltrados.map((p) => (
                                         <tr key={p.id}>
@@ -175,17 +198,16 @@ export default function Produtos() {
                                                     {p.quantidade} unidades
                                                 </span>
                                             </td>
+                                            <td style={{ fontWeight: 600 }}>
+                                                {/* Aplicação da lógica de validade */}
+                                                {renderValidadeStatus(p.data_expiracao)}
+                                            </td>
                                             <td>
                                                 <div className="actions-cell">
                                                     <button className="btn-icon delete" title="Eliminar" onClick={() => handleEliminar(p.id)}>
                                                         <Trash2 size={18} />
                                                     </button>
                                                 </div>
-                                            </td>
-                                            <td>
-                                                <span style={{fontFamily: 'monospace', fontWeight: 600}}>
-                                                    {p.data_expiracao || '---'} 
-                                                </span>
                                             </td>
                                         </tr>
                                     ))
@@ -202,6 +224,7 @@ export default function Produtos() {
                 </div>
             </main>
 
+            {/* Modal de Cadastro permanece igual */}
             {showModal && (
                 <div className="modal-overlay">
                     <div className="modal-container">

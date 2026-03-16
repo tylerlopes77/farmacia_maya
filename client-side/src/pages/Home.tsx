@@ -12,7 +12,6 @@ export default function Home() {
     const [resumo, setResumo] = useState({ total_itens: 0, valor_total_patrimonio: 0 });
     const [alertas, setAlertas] = useState<any[]>([]);
     
-    // Tipagem explícita para evitar o erro 'never' e 'undefined'
     const [dadosVendas, setDadosVendas] = useState<ChartData<'bar'>>({
         labels: [],
         datasets: []
@@ -21,44 +20,42 @@ export default function Home() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [resEstoque, resAlertas, resVendas] = await Promise.all([
-                    fetch('http://localhost:7000/relatorios/estoque'),
-                    fetch('http://localhost:7000/stock/alertas'),
-                    fetch('http://localhost:7000/relatorios/vendas?inicio=2024-01-01')
-                ]);
+    const fetchData = async () => {
+        try {
+            // Chamamos apenas o estoque, que agora traz tudo
+            const resEstoque = await fetch('http://localhost:7000/relatorios/estoque');
+            const data = await resEstoque.json();
 
-                const estoqueData = await resEstoque.json();
-                const alertasData = await resAlertas.json();
-                const vendasData = await resVendas.json();
+            setResumo({
+                total_itens: data.total_itens || 0,
+                valor_total_patrimonio: Number(data.valor_total_patrimonio) || 0
+            });
 
-                setResumo({
-                    total_itens: estoqueData.total_itens || 0,
-                    valor_total_patrimonio: Number(estoqueData.valor_total_patrimonio) || 0
+            if (data.dados_grafico && data.dados_grafico.length > 0) {
+                setDadosVendas({
+                    labels: data.dados_grafico.map((d: any) => d.nome),
+                    datasets: [{
+                        label: 'Valor em Stock (AOA)',
+                        data: data.dados_grafico.map((d: any) => Number(d.valor_total)),
+                        backgroundColor: '#3b82f6', // Um azul elegante para património
+                        borderRadius: 8,
+                    }]
                 });
-                
-                setAlertas(alertasData.produtos || []);
-
-                if (vendasData.dados && vendasData.dados.length > 0) {
-                    setDadosVendas({
-                        labels: vendasData.dados.map((d: any) => d.nome),
-                        datasets: [{
-                            label: 'Receita por Produto (AOA)',
-                            data: vendasData.dados.map((d: any) => Number(d.receita_total)),
-                            backgroundColor: '#10b981',
-                            borderRadius: 8,
-                        }]
-                    });
-                }
-                setLoading(false);
-            } catch (error) {
-                console.error("Erro ao buscar dados:", error);
-                setLoading(false);
             }
-        };
-        fetchData();
-    }, []);
+            
+            // Mantemos os alertas de reposição de outra rota
+            const resAlertas = await fetch('http://localhost:7000/stock/alertas');
+            const alertasData = await resAlertas.json();
+            setAlertas(alertasData.produtos || []);
+
+            setLoading(false);
+        } catch (error) {
+            console.error("Erro ao carregar Dashboard:", error);
+            setLoading(false);
+        }
+    };
+    fetchData();
+}, []);
 
     if (loading) return <div style={{marginLeft: '280px', padding: '40px'}}>Carregando Dashboard...</div>;
 
@@ -105,7 +102,7 @@ export default function Home() {
 
                 <div className="charts-section">
                     <div className="chart-box">
-                        <h4 style={{marginBottom: '20px'}}>Desempenho de Vendas</h4>
+                        <h4 style={{marginBottom: '20px'}}>Valor em stock de cada produto</h4>
                         <div style={{height: '280px'}}> {/* Container com altura fixa para o ChartJS */}
                             { (dadosVendas.labels?.length ?? 0) > 0 ? (
                                 <Bar 
