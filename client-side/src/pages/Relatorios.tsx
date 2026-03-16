@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import Sidebar from "../components/SideBar.tsx";
 import { 
-    FileText, 
     Download, 
-    TrendingUp, 
     Package, 
     AlertTriangle, 
-    DollarSign 
+    DollarSign,
+    Clock, 
+    AlertCircle
 } from 'lucide-react';
 
 import '../styles/relatorios.css';
@@ -37,6 +37,27 @@ export default function Relatorios() {
         fetchRelatorios();
     }, []);
 
+    // Lógica para decidir o que exibir na coluna de validade
+    const renderValidade = (dataExp: string | null) => {
+        if (!dataExp) return <span>---</span>;
+
+        const hoje = new Date();
+        const dataProduto = new Date(dataExp);
+        const diffTempo = dataProduto.getTime() - hoje.getTime();
+        const diffDias = Math.ceil(diffTempo / (1000 * 60 * 60 * 24));
+
+        if (diffDias < 0) {
+            return <span className="badge expirado">EXPIRADO</span>;
+        } 
+        
+        if (diffDias <= 30) {
+            return <span className="badge alerta">Expira em {diffDias} dias</span>;
+        }
+
+        // Se estiver tudo bem, mostra apenas a data
+        return <span>{dataExp}</span>;
+    };
+
     const exportarPDF = () => {
         window.open('http://localhost:7000/relatorios/estoque/pdf', '_blank');
     };
@@ -49,7 +70,7 @@ export default function Relatorios() {
                 <header className="header-section">
                     <div className="header-title">
                         <h2>Relatórios e Análises</h2>
-                        <p>Visualize a saúde financeira e o nível de estoque da farmácia.</p>
+                        <p>Controle de validade e patrimônio da farmácia.</p>
                     </div>
                     <button className="btn-export" onClick={exportarPDF}>
                         <Download size={20} /> Exportar PDF
@@ -57,7 +78,7 @@ export default function Relatorios() {
                 </header>
 
                 {loading ? (
-                    <p>Gerando dados estatísticos...</p>
+                    <div className="loading-state">Processando dados...</div>
                 ) : (
                     <>
                         <div className="kpi-grid">
@@ -78,27 +99,26 @@ export default function Relatorios() {
                             </div>
 
                             <div className="kpi-card">
-                                <div className="kpi-icon orange"><AlertTriangle /></div>
+                                <div className="kpi-icon orange"><AlertTriangle size={24} /></div>
                                 <div className="kpi-data">
-                                    <span>Itens Críticos</span>
-                                    <h3>{estoque?.produtos.filter(p => p.status_nivel === 'BAIXO').length}</h3>
+                                    <span>Status Crítico</span>
+                                    <h3>{estoque?.produtos.filter(p => p.status_nivel === 'BAIXO').length} itens</h3>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Visualização de Tabela */}
                         <section className="report-table-section">
                             <div className="table-header">
-                                <h3>Detalhamento de Estoque</h3>
+                                <h3>Listagem de Inventário</h3>
                             </div>
                             <table className="report-table">
                                <thead>
                                    <tr>
                                        <th>Produto</th>
                                        <th>Qtd</th>
-                                       <th>Preço Unit.</th>
                                        <th>Valor Total</th>
-                                       <th>Status</th>
+                                       <th>Status Stock</th>
+                                       <th>Data Expiração / Alerta</th>
                                    </tr>
                                </thead>
                                <tbody>
@@ -106,12 +126,14 @@ export default function Relatorios() {
                                        <tr key={index}>
                                            <td><strong>{p.nome}</strong></td>
                                            <td>{p.quantidade}</td>
-                                           <td>{p.preco} Kz</td>
-                                           <td>{p.valor_estimado_estoque} Kz</td>
+                                           <td>{p.valor_estimado_estoque.toLocaleString('pt-PT')} Kz</td>
                                            <td>
                                                <span className={`badge ${p.status_nivel.toLowerCase()}`}>
                                                    {p.status_nivel}
                                                </span>
+                                           </td>
+                                           <td style={{ fontWeight: 500 }}>
+                                               {renderValidade(p.data_expiracao)}
                                            </td>
                                        </tr>
                                    ))}

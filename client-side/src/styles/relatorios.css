@@ -31,3 +31,45 @@
     border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: 0.2s;
 }
 .btn-export:hover { background: #334155; }
+/* Novas cores para os badges de validade */
+.badge.expirado {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #f87171;
+}
+
+.badge.alerta {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fbbf24;
+}
+
+/* Novo ícone vermelho para o KPI */
+.kpi-icon.red {
+    background: #ef4444;
+}
+
+/* Alerta visual no card se houver vencidos */
+.border-danger {
+    border: 2px solid #fca5a5;
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0% { border-color: #fca5a5; }
+    50% { border-color: #ef4444; }
+    100% { border-color: #fca5a5; }
+}
+
+.sub-text {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.loading-state {
+    padding: 50px;
+    text-align: center;
+    color: #64748b;
+    font-weight: 500;
+}

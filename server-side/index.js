@@ -422,6 +422,7 @@ app.get('/relatorios/estoque', async (req, res) => {
             nome, 
             quantidade, 
             preco,
+            data_expiracao,
             (quantidade * preco) AS valor_estimado_estoque,
             CASE 
                 WHEN quantidade <= 5 THEN 'BAIXO'

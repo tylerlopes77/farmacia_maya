@@ -2,8 +2,8 @@ import { useEffect, useState, FormEvent } from 'react';
 import Sidebar from '../components/SideBar.tsx';
 import '../styles/produtos.css';
 
-import { Plus , Trash2, X, Package, DollarSign, Users, Calendar } from 'lucide-react';
-
+// Adicionado o ícone Search
+import { Plus, Trash2, X, Package, DollarSign, Users, Calendar, Search } from 'lucide-react';
 
 interface Produto {
     id: number;
@@ -11,7 +11,7 @@ interface Produto {
     preco: string | number;
     quantidade: number;
     fornecedor_id?: number;
-    data_expiracao? : string | null;
+    data_expiracao?: string | null;
 }
 
 interface Fornecedor {
@@ -24,14 +24,16 @@ export default function Produtos() {
     const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-
     
+    // 1. Estado para o termo de pesquisa
+    const [searchTerm, setSearchTerm] = useState('');
+
     const [formData, setFormData] = useState({
         nome: '',
         preco: '',
         quantidade: '',
         fornecedor_id: '',
-        data_expiracao : ''
+        data_expiracao: ''
     });
 
     useEffect(() => {
@@ -40,7 +42,6 @@ export default function Produtos() {
 
     const fetchData = async () => {
         try {
-
             const [resProdutos, resFornecedores] = await Promise.all([
                 fetch('http://localhost:7000/produtos/listar'),
                 fetch('http://localhost:7000/fornecedores') 
@@ -55,6 +56,12 @@ export default function Produtos() {
             setLoading(false);
         }
     };
+
+    // 2. Lógica de Filtragem (calculada a cada renderização)
+    const produtosFiltrados = produtos.filter((p) =>
+        p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.id.toString().includes(searchTerm)
+    );
 
     const handleEliminar = async (id: number) => {
         if (window.confirm("Tem a certeza que deseja eliminar este produto?")) {
@@ -109,7 +116,6 @@ export default function Produtos() {
         return new Intl.NumberFormat('pt-AO', { style: 'currency', currency: 'AOA' }).format(Number(value));
     };
 
-
     return (
         <div className="page-layout">
             <Sidebar />
@@ -120,6 +126,20 @@ export default function Produtos() {
                         <h2>Gestão de Produtos</h2>
                         <p>Gerencie o inventário da Farmácia Maya.</p>
                     </div>
+
+                    {/* 3. Barra de Pesquisa */}
+                    <div className="search-wrapper" style={{ flex: 1, maxWidth: '400px', margin: '0 20px', position: 'relative' }}>
+                        <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                        <input 
+                            type="text" 
+                            placeholder="Pesquisar por nome ou ID..." 
+                            className="form-input" 
+                            style={{ paddingLeft: '40px', marginBottom: 0, width: '100%' }}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
                     <button className="btn-primary" onClick={() => setShowModal(true)}>
                         <Plus size={20} />
                         Novo Produto
@@ -137,42 +157,50 @@ export default function Produtos() {
                                     <th>Preço Un.</th>
                                     <th>Status de Stock</th>
                                     <th>Ações</th>
-                                    <th>Data de expiracação</th>
+                                    <th>Data de expiração</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {produtos.map((p) => (
-                                    <tr key={p.id}>
-                                        <td>
-                                            <div className="product-name">{p.nome}</div>
-                                            <div style={{fontSize:'0.85rem', color:'var(--text-secondary)', marginTop:'4px'}}>ID: #{p.id}</div>
-                                        </td>
-                                        <td style={{fontFamily: 'monospace', fontWeight: 600}}>{formatCurrency(p.preco)}</td>
-                                        <td>
-                                            <span className={`stock-badge ${p.quantidade <= 5 ? 'stock-low' : 'stock-ok'}`}>
-                                                {p.quantidade} unidades
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <div className="actions-cell">
-                                                <button className="btn-icon delete" title="Eliminar" onClick={() => handleEliminar(p.id)}>
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span style={{fontFamily: 'monospace', fontWeight: 600}}>
-                                                {p.data_expiracao} 
-                                            </span>
+                                {/* 4. Mapear a lista filtrada em vez da original */}
+                                {produtosFiltrados.length > 0 ? (
+                                    produtosFiltrados.map((p) => (
+                                        <tr key={p.id}>
+                                            <td>
+                                                <div className="product-name">{p.nome}</div>
+                                                <div style={{fontSize:'0.85rem', color:'var(--text-secondary)', marginTop:'4px'}}>ID: #{p.id}</div>
+                                            </td>
+                                            <td style={{fontFamily: 'monospace', fontWeight: 600}}>{formatCurrency(p.preco)}</td>
+                                            <td>
+                                                <span className={`stock-badge ${p.quantidade <= 5 ? 'stock-low' : 'stock-ok'}`}>
+                                                    {p.quantidade} unidades
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div className="actions-cell">
+                                                    <button className="btn-icon delete" title="Eliminar" onClick={() => handleEliminar(p.id)}>
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span style={{fontFamily: 'monospace', fontWeight: 600}}>
+                                                    {p.data_expiracao || '---'} 
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>
+                                            Nenhum produto encontrado para "{searchTerm}"
                                         </td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     )}
                 </div>
             </main>
-
 
             {showModal && (
                 <div className="modal-overlay">
@@ -191,7 +219,7 @@ export default function Produtos() {
                             </div>
                             <div className="form-group">
                                 <label className="form-label"><Calendar size={18}/> Data de expiração </label>
-                                    <input type="date" name="data_expiracao" id="" value={formData.data_expiracao}  onChange={handleInputChange} />
+                                    <input type="date" name="data_expiracao" className="form-input" value={formData.data_expiracao} onChange={handleInputChange} />
                             </div>
 
                             <div className="form-group" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
@@ -203,14 +231,13 @@ export default function Produtos() {
                                     <label className="form-label"><Package size={18}/> Qtd. Inicial</label>
                                     <input type="number" name="quantidade" className="form-input" placeholder="0" value={formData.quantidade} onChange={handleInputChange} required />
                                 </div>
-                                
                             </div>
 
                             <div className="form-group">
                                 <label className="form-label"><Users size={18}/> Fornecedor</label>
                                 <select name="fornecedor_id" className="form-input" value={formData.fornecedor_id} onChange={handleInputChange} required style={{backgroundColor: 'white'}}>
                                     <option value="">Selecione um fornecedor...</option>
-                                    {fornecedores.length === 0 && <option disabled>Nenhum fornecedor encontrado. Cadastre um primeiro.</option>}                                    {fornecedores.map(f => (
+                                    {fornecedores.map(f => (
                                         <option key={f.id} value={f.id}>{f.nome}</option>
                                     ))}
                                 </select>
