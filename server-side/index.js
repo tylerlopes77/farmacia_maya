@@ -18,7 +18,6 @@ app.use(cors({
 }))
 
 
-
 const verificarToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -45,7 +44,6 @@ const eAdmin = async (req, res, next) => {
         res.status(500).json({ message: 'Erro ao verificar privilégios.' });
     }
 };
-
 
 app.post('/signup', async (req, res) => {
     try {
@@ -77,7 +75,6 @@ app.post('/signup', async (req, res) => {
     }
 });
 
-
 app.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -94,7 +91,6 @@ app.post('/login', async (req, res) => {
         }
 
         const admin = result.rows[0];
-
 
         const isMatch = await bcrypt.compare(password, admin.password);
 
@@ -118,7 +114,6 @@ app.post('/login', async (req, res) => {
         return res.status(500).json({ message: 'Erro interno no servidor' });
     }
 });
-
 
 // Gestão de fornecedores
 app.get('/fornecedores', async (req, res) => {
@@ -189,7 +184,6 @@ app.patch('/fornecedores/editar/:id', async (req, res) => {
     }
 });
 
-
 app.delete('/fornecedores/excluir/:id', async (req, res) => {
     const { id } = req.params;
     const sql = 'DELETE FROM fornecedores WHERE id = $1';
@@ -243,29 +237,51 @@ app.get('/fornecedores/:id/historico', async (req, res) => {
     }
 });
 
-
-
 // Gestão de Produtos
 app.post('/produtos/add', async (req, res) => {
-    const { nome, preco, quantidade, fornecedor_id , data_expiracao} = req.body;
+    const { nome, preco, quantidade, fornecedor_id, data_expiracao, categoria, data_criacao } = req.body;
 
-    if (!nome || !preco || !quantidade || !fornecedor_id || !data_expiracao) {
+    if (!nome || !preco || !quantidade || !fornecedor_id || !data_expiracao || !categoria) {
         return res.status(400).json({ message: "Preencha todos os campos obrigatórios." });
     }
 
+    const hoje = new Date();
+    const exp = new Date(data_expiracao);
+
+    hoje.setHours(0, 0, 0, 0);
+    exp.setHours(0, 0, 0, 0);
+
+    const diffTempo = exp.getTime() - hoje.getTime();
+    const diffDias = Math.round(diffTempo / (1000 * 60 * 60 * 24));
+
+    if (diffDias <= 10) {
+        return res.status(400).json({ 
+            message: `Validade insuficiente. O produto tem apenas ${diffDias} dias restantes (mínimo 11).` 
+        });
+    }
+
     const sql = `
-    INSERT INTO produtos (nome, preco, quantidade, fornecedor_id , data_expiracao)
-    VALUES ($1, $2, $3, $4 , $5)
+        INSERT INTO produtos (nome, preco, quantidade, fornecedor_id, data_expiracao, categoria, data_criacao)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
     `;
 
     try {
-        await pool.query(sql, [nome, preco, quantidade, fornecedor_id , data_expiracao]);
+        const dataFinalCriacao = data_criacao ? new Date(data_criacao) : new Date();
+
+        await pool.query(sql, [
+            nome, 
+            preco, 
+            quantidade, 
+            fornecedor_id, 
+            data_expiracao, 
+            categoria, 
+            dataFinalCriacao.toISOString()
+        ]);
         res.status(201).json({ message: 'Produto cadastrado com sucesso!' });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao cadastrar produto', details: error.message });
     }
 });
-
 
 app.get('/produtos/listar', async (req, res) => {
   const sql = 'SELECT * FROM produtos ORDER BY id ASC';
@@ -277,7 +293,6 @@ app.get('/produtos/listar', async (req, res) => {
         res.status(500).json({ error: 'Erro ao listar produtos', details: error.message });
     }
 });
-
 
 app.patch('/produtos/editar/:id', async (req, res) => {
     const { id } = req.params;
@@ -318,7 +333,6 @@ app.patch('/produtos/editar/:id', async (req, res) => {
     }
 });
 
-
 app.delete('/produtos/excluir/:id', async (req, res) => {
     const { id } = req.params;
     const sql = 'DELETE FROM produtos WHERE id = $1';
@@ -336,11 +350,12 @@ app.delete('/produtos/excluir/:id', async (req, res) => {
     }
 });
 
-
-
 // --- CONTROLE DE STOCK ---
-app.post('/stock/movimentar', async (req, res) => {
+
+// Rota única e unificada para movimentar o stock (Requer Token)
+app.post('/stock/movimentar', verificarToken, async (req, res) => {
     const { produto_id, quantidade, tipo, motivo } = req.body; 
+    const admin_id = req.user.id; 
 
     if (!['entrada', 'saida'].includes(tipo)) {
         return res.status(400).json({ error: "O tipo deve ser 'entrada' ou 'saida'." });
@@ -357,7 +372,7 @@ app.post('/stock/movimentar', async (req, res) => {
         let novaQuantidade;
 
         if (tipo === 'entrada') {
-            novaQuantidade = stockAtual + quantidade;
+            novaQuantidade = stockAtual + parseInt(quantidade);
         } else {
             if (stockAtual < quantidade) throw new Error(`Stock insuficiente para ${nomeProduto}.`);
             novaQuantidade = stockAtual - parseInt(quantidade);
@@ -365,8 +380,9 @@ app.post('/stock/movimentar', async (req, res) => {
 
         await pool.query('UPDATE produtos SET quantidade = $1 WHERE id = $2', [novaQuantidade, produto_id]);
 
-        const sqlHist = `INSERT INTO historico_stock (produto_id, tipo, quantidade, data_mov) VALUES ($1, $2, $3, NOW())`;
-        await pool.query(sqlHist, [produto_id, tipo, quantidade]);
+        const motivoFormatado = motivo && motivo.trim() !== '' ? motivo : 'Não informado';
+        const sqlHist = `INSERT INTO historico_stock (produto_id, tipo, quantidade, data_mov, admin_id, motivo) VALUES ($1, $2, $3, NOW(), $4, $5)`;
+        await pool.query(sqlHist, [produto_id, tipo, quantidade, admin_id, motivoFormatado]);
 
         await pool.query('COMMIT');
 
@@ -376,11 +392,10 @@ app.post('/stock/movimentar', async (req, res) => {
         }
 
         res.json({ 
-            message: `Movimentação de ${tipo} realizada com sucesso.`,
+            message: `Movimentação de ${tipo} realizada com sucesso.`, 
             novo_stock: novaQuantidade,
             alerta: alerta
         });
-
     } catch (error) {
         await pool.query('ROLLBACK');
         res.status(400).json({ error: error.message });
@@ -388,7 +403,7 @@ app.post('/stock/movimentar', async (req, res) => {
 });
 
 app.get('/stock/alertas', async (req, res) => {
-    const LIMITE_CRITICO = 3; 
+    const LIMITE_CRITICO = 10; 
 
     const sql = `
         SELECT id, nome, quantidade 
@@ -413,38 +428,61 @@ app.get('/stock/alertas', async (req, res) => {
     }
 });
 
-
+app.get('/stock/historico', async (req, res) => {
+    const sql = `
+        SELECT 
+            h.id, 
+            p.nome as produto_nome, 
+            h.tipo, 
+            h.quantidade, 
+            h.data_mov,
+            h.motivo,
+            COALESCE(a.nome, 'Sistema') as funcionario_nome 
+        FROM historico_stock h
+        JOIN produtos p ON h.produto_id = p.id
+        LEFT JOIN admin a ON h.admin_id = a.id
+        ORDER BY h.data_mov DESC
+    `;
+    try {
+        const result = await pool.query(sql);
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao buscar histórico', details: error.message });
+    }
+});
 
 // --- RELATÓRIOS ---
+
 app.get('/relatorios/estoque', async (req, res) => {
     const sql = `
         SELECT 
             nome, 
             quantidade, 
             preco,
-            (quantidade * preco) AS valor_total
+            categoria,
+            data_criacao,
+            data_expiracao,
+            (quantidade * preco) AS valor_estimado_estoque,
+            CASE WHEN quantidade <= 10 THEN 'BAIXO' ELSE 'NORMAL' END AS status_nivel
         FROM produtos
-        ORDER BY valor_total DESC -- Os produtos mais valiosos primeiro
-        LIMIT 10 -- Para o gráfico não ficar muito poluído
+        ORDER BY data_criacao DESC
     `;
 
     try {
         const result = await pool.query(sql);
-        
         const totalItens = result.rows.reduce((acc, item) => acc + item.quantidade, 0);
-        const patrimonioTotal = result.rows.reduce((acc, item) => acc + parseFloat(item.valor_total), 0);
+        const patrimonioTotal = result.rows.reduce((acc, item) => acc + parseFloat(item.valor_estimado_estoque), 0);
 
         res.json({
             total_itens: totalItens,
             valor_total_patrimonio: patrimonioTotal,
-            dados_grafico: result.rows 
+            produtos: result.rows 
         });
     } catch (error) {
-        res.status(500).json({ error: 'Erro ao gerar dados', details: error.message });
+        res.status(500).json({ error: 'Erro ao gerar dados' });
     }
 });
 
-// 2. Relatório de Vendas (Total vendido por período)
 app.get('/relatorios/vendas', async (req, res) => {
     const { inicio, fim } = req.query; 
 
@@ -471,7 +509,6 @@ app.get('/relatorios/vendas', async (req, res) => {
     }
 });
 
-// 3. Relatório de Compras/Gastos com Fornecedores
 app.get('/relatorios/compras', async (req, res) => {
     const sql = `
         SELECT 
@@ -492,82 +529,127 @@ app.get('/relatorios/compras', async (req, res) => {
     }
 });
 
-// 4. Gera pdf com o relatório
 app.get('/relatorios/estoque/pdf', async (req, res) => {
     try {
-        const result = await pool.query(`
+        const estoqueResult = await pool.query(`
             SELECT nome, quantidade, preco, (quantidade * preco) as valor_total 
             FROM produtos 
-            ORDER BY quantidade ASC
+            ORDER BY nome ASC
         `);
 
-        const doc = new PDFDocument({ margin: 30 });
+        const historicoResult = await pool.query(`
+            SELECT 
+                p.nome as produto_nome, 
+                h.tipo, 
+                h.quantidade, 
+                h.motivo, 
+                h.data_mov,
+                COALESCE(a.nome, 'Sistema') as funcionario
+            FROM historico_stock h
+            JOIN produtos p ON h.produto_id = p.id
+            LEFT JOIN admin a ON h.admin_id = a.id
+            ORDER BY h.data_mov DESC
+            LIMIT 50
+        `);
 
-        res.setHeader('Content-Type', 'application/json');
+        const doc = new PDFDocument({ margin: 40, size: 'A4' });
+
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'attachment; filename=relatorio_estoque.pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=relatorio_auditoria_farmacia.pdf');
 
         doc.pipe(res); 
 
-        doc.fontSize(20).text('Relatório de Estoque - Farmácia Maya', { align: 'center' });
+        doc.fontSize(20).fillColor('#062d27').text('Relatório de Auditoria e Stock', { align: 'center' });
+        doc.fontSize(12).fillColor('#10b981').text('Farmácia Maya', { align: 'center' });
         doc.moveDown();
-        doc.fontSize(10).text(`Gerado em: ${new Date().toLocaleString()}`, { align: 'right' });
+        doc.fontSize(10).fillColor('gray').text(`Gerado em: ${new Date().toLocaleString('pt-PT')}`, { align: 'right' });
+        doc.moveDown(2);
+
+        doc.fontSize(14).fillColor('black').text('1. Posição de Estoque Atual', { underline: true });
         doc.moveDown();
 
-        doc.fontSize(12).fillColor('gray').text('Produto', 50, 150);
-        doc.text('Qtd', 250, 150);
-        doc.text('Preço Unit.', 350, 150);
-        doc.text('Total', 450, 150);
+        doc.fontSize(10).fillColor('gray').text('Produto', 40, doc.y);
+        doc.text('Qtd', 280, doc.y);
+        doc.text('Preço Unit.', 350, doc.y);
+        doc.text('Total (Kz)', 450, doc.y);
         
-        doc.moveTo(50, 165).lineTo(550, 165).stroke(); 
+        let y = doc.y + 10;
+        doc.moveTo(40, y).lineTo(550, y).stroke(); 
+        y += 10;
 
-        let y = 180;
         doc.fillColor('black');
         
-        result.rows.forEach(item => {
-            
-            if (y > 700) { 
+        estoqueResult.rows.forEach(item => {
+            if (y > 750) { 
                 doc.addPage();
-                y = 50; 
+                y = 40; 
             }
 
-            doc.fontSize(10).text(item.nome, 50, y);
-            doc.text(item.quantidade.toString(), 250, y);
-            doc.text(`Kz ${item.preco}`, 350, y);
-            doc.text(`Kz ${item.valor_total}`, 450, y);
+            doc.fontSize(9).text(item.nome.substring(0, 40), 40, y);
+            doc.text(item.quantidade.toString(), 280, y);
+            doc.text(Number(item.preco).toLocaleString('pt-PT'), 350, y);
+            doc.text(Number(item.valor_total).toLocaleString('pt-PT'), 450, y);
             
             y += 20;
         });
 
+        if (y > 650) { doc.addPage(); y = 40; } else { y += 30; }
+
+        doc.fontSize(14).fillColor('black').text('2. Últimas Movimentações (Auditoria)', 40, y, { underline: true });
+        y += 25;
+
+        doc.fontSize(9).fillColor('gray');
+        doc.text('Data', 40, y);
+        doc.text('Tipo/Qtd', 120, y);
+        doc.text('Produto', 200, y);
+        doc.text('Funcionário', 340, y);
+        doc.text('Motivo', 440, y);
+        
+        y += 10;
+        doc.moveTo(40, y).lineTo(550, y).stroke(); 
+        y += 10;
+
+        doc.fillColor('black');
+
+        historicoResult.rows.forEach(mov => {
+            if (y > 750) { 
+                doc.addPage();
+                y = 40; 
+            }
+
+            const dataFormatada = new Date(mov.data_mov).toLocaleDateString('pt-PT');
+            const operacao = mov.tipo === 'entrada' ? `+${mov.quantidade}` : `-${mov.quantidade}`;
+            const corOperacao = mov.tipo === 'entrada' ? '#10b981' : '#ef4444'; 
+            
+            doc.fontSize(8).fillColor('black');
+            doc.text(dataFormatada, 40, y);
+            
+            doc.fillColor(corOperacao).text(`${mov.tipo.toUpperCase()} (${operacao})`, 120, y);
+            
+            doc.fillColor('black');
+            doc.text(mov.produto_nome.substring(0, 25), 200, y);
+            doc.text(mov.funcionario.substring(0, 18), 340, y);
+            
+            const motivoTexto = mov.motivo ? mov.motivo.substring(0, 22) + (mov.motivo.length > 22 ? '...' : '') : 'N/A';
+            doc.text(motivoTexto, 440, y);
+            
+            y += 20;
+        });
+
+        doc.moveTo(40, y).lineTo(550, y).stroke(); 
+        doc.moveDown();
+        doc.fontSize(8).fillColor('gray').text('Fim do relatório.', { align: 'center' });
+
         doc.end(); 
 
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Erro ao gerar PDF' });
+        console.error("Erro na geração do PDF:", err);
+        res.status(500).json({ error: 'Erro interno ao processar o documento PDF.' });
     }
 });
 
-// Rota para buscar o histórico de movimentações
-app.get('/stock/historico', async (req, res) => {
-    const sql = `
-        SELECT h.id, p.nome as produto_nome, h.tipo, h.quantidade, h.data_mov 
-        FROM historico_stock h
-        JOIN produtos p ON h.produto_id = p.id
-        ORDER BY h.data_mov DESC 
-        LIMIT 20
-    `;
-    try {
-        const result = await pool.query(sql);
-        res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Erro ao buscar histórico', details: error.message });
-    }
-});
+// --- ADMIN UTILIZADORES ---
 
-
-
-
-// Listar todos
 app.get('/admin/utilizadores', verificarToken, eAdmin, async (req, res) => {
     try {
         const sql = `
@@ -583,7 +665,6 @@ app.get('/admin/utilizadores', verificarToken, eAdmin, async (req, res) => {
     }
 });
 
-// Adicionar Staff
 app.post('/admin/utilizadores/add', verificarToken, eAdmin, async (req, res) => {
     const { nome, email, password, role_id } = req.body;
     try {
@@ -598,7 +679,6 @@ app.post('/admin/utilizadores/add', verificarToken, eAdmin, async (req, res) => 
     }
 });
 
-// Editar Staff/Roles
 app.patch('/admin/utilizadores/editar/:id', verificarToken, eAdmin, async (req, res) => {
     const { id } = req.params;
     const { nome, email, role_id } = req.body;
@@ -614,7 +694,6 @@ app.patch('/admin/utilizadores/editar/:id', verificarToken, eAdmin, async (req, 
     }
 });
 
-// Excluir Staff
 app.delete('/admin/utilizadores/excluir/:id', verificarToken, eAdmin, async (req, res) => {
     try {
         if (parseInt(req.params.id) === req.user.id) {

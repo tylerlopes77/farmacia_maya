@@ -14,7 +14,7 @@ interface User {
 export default function AccountManager() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
-    const [editingUser, setEditingUser] = useState<number | null>(null);
+    const [editingUser, setEditingUser] = useState<number>();
     
     const [users, setUsers] = useState<User[]>([]);
     const [formData, setFormData] = useState({ nome: '', email: '', password: '', role_id: 3 });

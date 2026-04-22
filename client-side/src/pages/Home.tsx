@@ -103,7 +103,7 @@ export default function Home() {
                 <div className="charts-section">
                     <div className="chart-box">
                         <h4 style={{marginBottom: '20px'}}>Valor em stock de cada produto</h4>
-                        <div style={{height: '280px'}}> {/* Container com altura fixa para o ChartJS */}
+                        <div style={{height: '280px'}}> 
                             { (dadosVendas.labels?.length ?? 0) > 0 ? (
                                 <Bar 
                                     data={dadosVendas} 

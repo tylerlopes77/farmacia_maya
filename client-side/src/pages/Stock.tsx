@@ -23,11 +23,10 @@ export default function Stock() {
     const [alertas, setAlertas] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     
-    // Estado do Formulário de Movimentação
     const [movimentacao, setMovimentacao] = useState({
         produto_id: '',
         quantidade: '',
-        tipo: 'entrada', // 'entrada' ou 'saida'
+        tipo: 'entrada', 
         motivo: ''
     });
 
@@ -57,10 +56,16 @@ export default function Stock() {
 
     const handleMovimentar = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        const token = localStorage.getItem('token'); 
+
         try {
             const response = await fetch('http://localhost:7000/stock/movimentar', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
                 body: JSON.stringify({
                     produto_id: parseInt(movimentacao.produto_id),
                     quantidade: parseInt(movimentacao.quantidade),
@@ -72,11 +77,11 @@ export default function Stock() {
             const result = await response.json();
 
             if (response.ok) {
-                alert(result.message + (result.alerta ? `\n\n${result.alerta}` : ''));
+                alert(result.message);
                 setMovimentacao({ produto_id: '', quantidade: '', tipo: 'entrada', motivo: '' });
-                carregarDados(); // Recarrega lista e alertas
+                carregarDados();
             } else {
-                alert("Erro: " + result.error);
+                alert("Erro: " + (result.message || result.error));
             }
         } catch (error) {
             alert("Erro na conexão com o servidor.");
@@ -100,7 +105,6 @@ export default function Stock() {
                 </header>
 
                 <div className="grid-stock">
-                    {/* Painel de Movimentação */}
                     <section className="panel">
                         <div className="panel-title">
                             <History size={20} />
